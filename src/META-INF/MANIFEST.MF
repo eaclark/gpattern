@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Class-Path: jpattern.jar groovy-2.2.1.jar
+Main-Class: 
+

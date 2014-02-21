@@ -99,7 +99,7 @@ class SblString implements ExternalVariable {
 
         (cv, cn)  = context.getCollection()
         SblPatNode newPat = pat.ia( cn) + context.'Fail'()
-        this[~newPat]
+        this[ newPat]
         context.releaseCollection( cn)
         return cv
     }
@@ -111,7 +111,7 @@ class SblString implements ExternalVariable {
 
         (cv, cn) = context.getCollection( clos)
         SblPatNode newPat = pat.ia( cn) + context.'Fail'()
-        this[~newPat]
+        this[ newPat]
         context.releaseCollection( cn)
         return cv
     }
@@ -126,7 +126,7 @@ class SblString implements ExternalVariable {
                                   ] as ExternalVariable )
 
         SblPatNode newPat = pat.ia( name) + context.'Fail'()
-        this[~newPat]
+        this[ newPat]
         context.vars.remove( name)
     }
 

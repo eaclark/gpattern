@@ -199,14 +199,14 @@ class BasicTests {
 
             // Succeed
             str1.value = 'XXXXXX'
-//            str1[~(Succeed() + (Len(1) + Arb()).ia('_OUTPUT') + Fail())]         // infinite loop
+//            str1[ Succeed() + (Len(1) + Arb()).ia('_OUTPUT') + Fail()]         // infinite loop
 
 
             // Tab and RTab
             ( cv, cn) = getCollection( { String s -> s.trim() })
-            str1.value = '   William T. Cahill         REP   Collingswood'
-            str1[~(Tab(3) + Tab(29).ca(cn) + Tab(35).ca(cn) + RTab(0).ca(cn))]
-            assert cv ==  ['William T. Cahill', 'REP', 'Collingswood']
+            str1.value = '   William T. Miller         IND   Collingswood'
+            str1[ Tab(3) + Tab(29).ca(cn) + Tab(35).ca(cn) + RTab(0).ca(cn)]
+            assert cv ==  ['William T. Miller', 'IND', 'Collingswood']
             releaseCollection( cn)
 
         }

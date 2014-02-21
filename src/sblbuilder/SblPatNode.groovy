@@ -287,8 +287,11 @@ class SblPatNode {
         // If so, create a Variable to hold the arg of the Defer node
         if( handleDefer == true && arg instanceof SblPatNode && arg.prim == DEFER) {
             Variable v = Variable.create(arg.arg)
-            // don't forget to register the new Variable
-            context.registerVariable(arg.arg, '')
+            // check if there is already a variable of this name
+            if (context.vars[arg.arg] == null) {
+                // register the new Variable
+                context.registerVariable(arg.arg, '')
+            }
             arg = v
         }
     }

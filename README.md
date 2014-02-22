@@ -4,7 +4,7 @@
 
 Gpattern is a library that tries to integrate Snobol style pattern matching functionality smoothly into Groovy programs.
 
-Gpattern uses the [Jpattern library] (https://github.com/Unidata/jpattern) written by Dennis Heimbigner to do the actual pattern matching.  Snobol patterns require a non-trivial state machine to handle all of the intricacies of matching on patterns that can do back tracking and be self-referential.  It is better to reuse an existing, running machine rather than try to build one from scratch.  (JPattern follows this advice itself in that it reuses the state machine logic of the [Ada Spitbol package] (http://gcc.gnu.org/onlinedocs/gcc-4.8.2/gnat_rm/The-GNAT-Library.html#The-GNAT-Library).
+Gpattern uses the Jpattern library written by [Dennis Heimbigner] (http://www.unidata.ucar.edu/staff/dmh/) to do the actual pattern matching.  Snobol patterns require a non-trivial state machine to handle all of the intricacies of matching on patterns that can do back tracking and be self-referential.  It is better to reuse an existing, running machine rather than try to build one from scratch.  (JPattern follows this advice itself in that it reuses the state machine logic of the [Ada Spitbol package] (http://gcc.gnu.org/onlinedocs/gcc-4.8.2/gnat_rm/The-GNAT-Library.html#The-GNAT-Library).
 
 In essence, Jpattern does the heavy lifting while Gpattern pretties up the integration into Groovy.
 
@@ -16,9 +16,9 @@ Having said that, it's probably at a point where it can be played with.  I would
 
 ## Download
 
-Two JARs are required to use Gpattern - *gpattern.jar* and *jpattern.jar*.  *gpattern.jar* is available at this repository, while *jpattern.jar* is at [github.com/Unidata/jpattern] (https://github.com/Unidata/jpattern).
+Only one JAR is required to use Gpattern - *gpattern.jar* - it contains the necessary *jpattern.jar* file.  *gpattern.jar* is available at [this repository] (https://github.com/eaclark/gpattern).  The [source for Gpattern and some tests](https://github.com/eaclark/gpattern) are there as well.
 
-Note that the <code>jpattern-x.x.jar</code> file is an archive that contains many files besides the required *jpattern.jar* file. It must be downloaded and unzipped to get the *jpattern.jar* file.
+If you want to play around with JPattern directly, then you can get it from [Dennis Heimbigner's software page] (http://www.unidata.ucar.edu/staff/dmh/software.html).  Dennis maintains the [source for JPattern at github](https://github.com/Unidata/jpattern).
 
 ## Integration into Groovy
 

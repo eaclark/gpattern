@@ -107,9 +107,9 @@ Putting the above snippet into a complete program, running this in a groovyConso
 
 
 ```
-  import sblbuilder.SblBuilder
-  import sblbuilder.SblMatchContext
-  import sblbuilder.SblString
+  import gpattern.SblBuilder
+  import gpattern.SblMatchContext
+  import gpattern.SblString
 
   SblBuilder builder = new SblBuilder()
   SblMatchContext matchCtx = builder.matchContext()

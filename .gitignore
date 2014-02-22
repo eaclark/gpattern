@@ -2,4 +2,4 @@
 .git
 lib
 out
-gpattern.iml
+*.iml

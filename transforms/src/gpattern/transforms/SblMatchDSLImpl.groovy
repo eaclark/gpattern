@@ -96,15 +96,17 @@ public class SblMatchDSLImpl implements ASTTransformation {
 
                     // start with the RHS
                     if( rhs instanceof BitwiseNegationExpression &&
-                            rhs.getExpression() instanceof ConstantExpression &&
-                            rhs.getExpression().value instanceof String) {
-                        be.rightExpression = new BitwiseNegationExpression( createStringPat( rhs.getExpression().text))
+                        ( (rhs.getExpression() instanceof ConstantExpression &&
+                           rhs.getExpression().value instanceof String) ||
+                          rhs.getExpression() instanceof GStringExpression)) {
+                            be.rightExpression = new BitwiseNegationExpression( createStringPat( rhs.getExpression()))
                     } else if( rhs instanceof MethodCallExpression &&
-                            rhs.getReceiver() instanceof ConstantExpression &&
-                            rhs.getReceiver().value instanceof String &&
-                            rhs.methodAsString in ['ca', 'ia', 'cr']) {
-                        be.rightExpression = new MethodCallExpression(
-                                createStringPat( rhs.getReceiver().text),
+                               ( (rhs.getReceiver() instanceof ConstantExpression &&
+                                  rhs.getReceiver().value instanceof String) ||
+                                 rhs.getReceiver() instanceof GStringExpression) &&
+                               rhs.methodAsString in ['ca', 'ia', 'cr']) {
+                            be.rightExpression = new MethodCallExpression(
+                                createStringPat( rhs.getReceiver()),
                                 new ConstantExpression( rhs.methodAsString),
                                 rhs.getArguments())
 //        println '\n  ---> new rhs = ' + be.rightExpression
@@ -112,15 +114,17 @@ public class SblMatchDSLImpl implements ASTTransformation {
 
                     // now visit the LHS
                     if( lhs instanceof BitwiseNegationExpression &&
-                            lhs.getExpression() instanceof ConstantExpression &&
-                            lhs.getExpression().value instanceof String) {
-                        be.leftExpression = new BitwiseNegationExpression( createStringPat( lhs.getExpression().text))
+                        ( (lhs.getExpression() instanceof ConstantExpression &&
+                           lhs.getExpression().value instanceof String) ||
+                          lhs.getExpression() instanceof GStringExpression)) {
+                            be.leftExpression = new BitwiseNegationExpression( createStringPat( lhs.getExpression()))
                     } else if( lhs instanceof MethodCallExpression &&
-                            lhs.getReceiver() instanceof ConstantExpression &&
-                            lhs.getReceiver().value instanceof String &&
-                            lhs.methodAsString in ['ca', 'ia', 'cr']) {
-                        be.leftExpression = new MethodCallExpression(
-                                createStringPat( lhs.getReceiver().text),
+                               ( (lhs.getReceiver() instanceof ConstantExpression &&
+                                  lhs.getReceiver().value instanceof String) ||
+                                 lhs.getReceiver() instanceof GStringExpression) &&
+                               lhs.methodAsString in ['ca', 'ia', 'cr']) {
+                            be.leftExpression = new MethodCallExpression(
+                                createStringPat( lhs.getReceiver()),
                                 new ConstantExpression( lhs.methodAsString),
                                 lhs.getArguments())
 //        println '\n  ---> new lhs = ' + be.leftExpression
@@ -141,17 +145,18 @@ public class SblMatchDSLImpl implements ASTTransformation {
 //                println '\nreceiver = ' + mce.receiver + '       class = ' + mce.receiver.class
 //                println '\nparams = ' + mce.getArguments().getExpressions()
                 if( mce.getReceiver().getType().getNameWithoutPackage() == 'SblString' &&
-                        (mce.getMethodAsString() == 'putAt' || mce.getMethodAsString() == 'getAt')
+                    (mce.getMethodAsString() == 'putAt' || mce.getMethodAsString() == 'getAt')
                 ) {
                     // if the first argument is a ~'string', then do the xform here
                     // otherwise, visit the argument
                     List argList = mce.getArguments().getExpressions()
                     def arg = argList[0]
                     if( arg instanceof BitwiseNegationExpression &&
-                            arg.getExpression() instanceof ConstantExpression &&
-                            arg.getExpression().value instanceof String) {
+                        ( (arg.getExpression() instanceof ConstantExpression &&
+                           arg.getExpression().value instanceof String) ||
+                          arg.getExpression() instanceof GStringExpression)) {
                         // rebuild the argument list --- replacing the first argument
-                        argList[0] = new BitwiseNegationExpression( createStringPat( arg.getExpression().text))
+                        argList[0] = new BitwiseNegationExpression( createStringPat( arg.getExpression()))
                         mce.setArguments( new ArgumentListExpression( argList))
                     } else mce.getArguments().visit( this)
                 } else super.visitMethodCallExpression( mce)
@@ -179,15 +184,17 @@ public class SblMatchDSLImpl implements ASTTransformation {
 //                println '\ninside unary, binary rhs = ' + rhs.text + '       class = ' + rhs.class
 
                 if( be.operation.type == Types.PLUS || be.operation.type == Types.BITWISE_OR) {
-                    if( lhs instanceof ConstantExpression && lhs.value instanceof String) {
-                        be.leftExpression = createStringPat( lhs.text)
+                    if( ( lhs instanceof ConstantExpression && lhs.value instanceof String) ||
+                        lhs instanceof GStringExpression) {
+                        be.leftExpression = createStringPat( lhs)
                     } else
                     if( lhs instanceof MethodCallExpression &&
-                            lhs.getReceiver() instanceof ConstantExpression &&
-                            lhs.getReceiver().value instanceof String &&
-                            lhs.methodAsString in ['ca', 'ia', 'cr']) {
+                        ( (lhs.getReceiver() instanceof ConstantExpression &&
+                           lhs.getReceiver().value instanceof String) ||
+                          lhs.getReceiver() instanceof GStringExpression) &&
+                        lhs.methodAsString in ['ca', 'ia', 'cr']) {
                         be.leftExpression = new MethodCallExpression(
-                                createStringPat( lhs.getReceiver().text),
+                                createStringPat( lhs.getReceiver()),
                                 new ConstantExpression( lhs.methodAsString),
                                 lhs.getArguments())
 //        println '\n  ---> new lhs = ' + be.leftExpression
@@ -195,15 +202,17 @@ public class SblMatchDSLImpl implements ASTTransformation {
                         lhs.visit( innerVisitor)
                     }
 
-                    if( rhs instanceof ConstantExpression && rhs.value instanceof String) {
-                        be.rightExpression = createStringPat( rhs.text)
+                    if( ( rhs instanceof ConstantExpression && rhs.value instanceof String) ||
+                        rhs instanceof GStringExpression) {
+                        be.rightExpression = createStringPat( rhs)
                     } else
                     if( rhs instanceof MethodCallExpression &&
-                            rhs.getReceiver() instanceof ConstantExpression &&
-                            rhs.getReceiver().value instanceof String &&
-                            rhs.methodAsString in ['ca', 'ia', 'cr']) {
+                        (( rhs.getReceiver() instanceof ConstantExpression &&
+                           rhs.getReceiver().value instanceof String) ||
+                          rhs.getReceiver() instanceof GStringExpression) &&
+                        rhs.methodAsString in ['ca', 'ia', 'cr']) {
                         be.rightExpression = new MethodCallExpression(
-                                createStringPat( rhs.getReceiver().text),
+                                createStringPat( rhs.getReceiver()),
                                 new ConstantExpression( rhs.methodAsString),
                                 rhs.getArguments())
 //        println '\n  ---> new rhs = ' + be.rightExpression
@@ -233,16 +242,17 @@ public class SblMatchDSLImpl implements ASTTransformation {
 //                println '\ninside unary, receiver = ' + mce.receiver + '       class = ' + mce.receiver.class
 //                println '\ninside unary, params = ' + mce.getArguments().getExpressions()
                 if( mce.getReceiver().getType().getNameWithoutPackage() == 'SblString' &&
-                        (mce.getMethodAsString() == 'putAt' || mce.getMethodAsString() == 'getAt')
+                    ( mce.getMethodAsString() == 'putAt' || mce.getMethodAsString() == 'getAt')
                 ) {
                     // if the first argument is a ~'string', then do the xform here
                     // otherwise, visit the argument
                     List argList = mce.getArguments().getExpressions()
                     def arg = argList[0]
-                    if (arg.getExpression() instanceof ConstantExpression &&
-                            arg.getExpression().value instanceof String) {
+                    if( ( arg.getExpression() instanceof ConstantExpression &&
+                          arg.getExpression().value instanceof String) ||
+                        arg.getExpression() instanceof GStringExpression) {
                         // rebuild the argument list --- replacing the first argument
-                        argList[0] = new BitwiseNegationExpression(createStringPat(arg.getExpression().text))
+                        argList[0] = new BitwiseNegationExpression(createStringPat(arg.getExpression()))
                         mce.setArguments(new ArgumentListExpression(argList))
                     } else mce.getArguments().visit(innerVisitor)
                 } else super.visitMethodCallExpression( mce)
@@ -250,13 +260,13 @@ public class SblMatchDSLImpl implements ASTTransformation {
         }
     }
 
-    private static MethodCallExpression createStringPat( String value) {
+    private static MethodCallExpression createStringPat( Expression value) {
+//println 'creating stringPat with text = ' + value.text
+//println 'for expression class = ' + value.class
         def call = new MethodCallExpression(
                 new VariableExpression( "this"),
                 new ConstantExpression( "StringPat"),
-                new ArgumentListExpression(
-                        new ConstantExpression( value),
-                )
+                new ArgumentListExpression( value)
         )
 //        call.implicitThis = true
 //        call.safe = exp.safe

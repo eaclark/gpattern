@@ -5,3 +5,4 @@ out
 *.iml
 tests/*.iml
 transforms/*.iml
+gpattern/*.iml

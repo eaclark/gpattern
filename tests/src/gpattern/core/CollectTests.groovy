@@ -93,11 +93,6 @@ class CollectTests {
             assert str3.collect( Balanced_String) == ['x', 'xy', 'xy[ab{cd}]', 'y', 'y[ab{cd}]', '[ab{cd}]', 'a',
                                                       'ab', 'ab{cd}', 'b', 'b{cd}', '{cd}', 'c', 'cd', 'd']
 
-
-            str1 = new SblString('   William T. Miller         IND   Collingswood')
-            ( cv, cn) = getCollection( { String s -> s.trim() })
-            str1[ Tab(3) + Tab(29).ca(cn) + Tab(35).ca(cn) + RTab(0).ca(cn)]
-            println cv
         }
     }
 }

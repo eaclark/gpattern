@@ -26,7 +26,10 @@ class ReplaceTests {
             X[ ~(' ')] = ' to '
             assert X.value == 'Welcome to Earth!'
 
-            //
+            // gstring handling
+            def world = 'Earth'
+            X[ ~("$world")] = 'Mars'
+            assert X.value == "Welcome to Mars!"
         }
     }
 }

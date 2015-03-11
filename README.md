@@ -139,15 +139,25 @@ yellow,green,blue,indigo,violet,red,orange
 
 Because of the way that Gpattern is implemented, there are a few caveats that you'll run into.  Part of releasing Gpattern now is to get a feel for whether these issues are too much.  Another part is see if someone out there can see away around one or more of them.
 
-#### Current Groovy compiler bug
+#### Current DSL and Groovy compiler bug
 
-This issue is painful, but hopefully it is temporary.
+This issue is painful, but hopefully it can be resolved.
 
-Because of the order that Groovy evaluates operands in an expression like:
+Groovy evaluates operands in an '=' expression like:
 
 `subject[ pattern] = replacement`
 
-Currently, Groovy evaluates the "replacement" portion before the "pattern" portion.  This breaks any Snobol like pattern where the "pattern" evaluation is suppose to have side effects that are used in the "replacement".
+in three steps:
+
+1. the RHS of the equals (replacement in this case)
+2. the LHS of the equals (resolving 'subject' and 'pattern')
+3. calling 'putAt' on subject to do the actual assignment
+
+I believe that the Groovy compiler is doing steps 1 and 2 are in the wrong order.  Furthermore, this doesn't match the order used by Java.
+
+But, another issue is that the 'puAt' method is being called last.  This is a problem because this method is where the actual pattern match is being executed - and last is too late.
+
+This evaluation ordering issue breaks any Snobol like pattern where the "pattern" evaluation is suppose to have side effects that are used in the "replacement".
 
 One example of such a pattern appears in the program above.  There, the "cycle" pattern used in the line:
 
@@ -160,7 +170,15 @@ has the side effect of assigning values to the "rest" and "item" variables.  In 
     rainbow = rest + ',' + item
 ```
       
-While this works for this program, splitting lines won't work for all replacement patterns.  Hopefully, this is only a temporary problem.
+While this works for this program, splitting lines won't work for all replacement patterns.  (E.g., this will have problems when the pattern match is only suppose to be replace a substring within the subject string.)
+
+Ideally, a replacement statement would be written as one statement and done in the following order:
+
+1. resolve the LHS, doing the pattern match (remembering the matched substring and any assignments done).
+2. resolve the RHS, building the replacement string.
+3. do the 'putAt' function, replacing the matched substring with the replacement string.
+
+Achieving this is still under investigation
 
 #### Patterns with explicit Strings or GStrings
 

@@ -24,7 +24,7 @@ If you want to play around with JPattern directly, then you can get it from [Den
 
 ## Integration into Groovy
 
-The semantics of string in Groovy is such that the individual characters and substrings of a given string can be accessed using an array notation:  str1[ 3] to get at the fourth character or str1[0..3] to get at the substring comprising the first four characters.  (And, of course, the indexing may be done by a variable that holds the numeric value or range rather than 
+The semantics of string in Groovy is such that the individual characters and substrings of a given string can be accessed using an array notation:  str1[ 3] to get at the fourth character or str1[0..3] to get at the substring comprising the first four characters.  (And, of course, the indexing may be done by a variable that holds the numeric value or range rather than hard coding the numbers.) 
 
 Gpatterns extends this indexing approach by allowing for the use of a pattern to provide the index.  This means that the core Snobol pattern construct:
 
@@ -75,7 +75,7 @@ Consider a snippet of Snobol code:
 ```
       rainbow = 'red,orange,yellow,green,blue,indigo,violet'
       cycle = break(',') . item len(1) rem . rest
-      rainbow cycle = rest item ','
+      rainbow cycle = rest ',' item
 ```
 
 This function of this snippet is to rotate the first word from the head of the string and appends it to the end of the string.  
@@ -84,18 +84,15 @@ The first line defines variable 'rainbow' that holds the string that is used as 
 
 The second line defines the 'cycle' variable that holds the pattern.  This pattern breaks on a comma and assigns what is before the comma to the 'item' variable.  It then skips over the comma and assigns the remainder of the string to the 'rest' variable.
 
-The third line does the pattern match on the left hand side of the equals sign - includign the population of "item" and "rest" - then builds the replacement string using those variables (plus a new comma).
+The third line does the pattern match on the left hand side of the equals sign - including the population of "item" and "rest" - then builds the replacement string using those variables (plus a new comma).
 
 The equivalent Gpattern code is:
 
 ```
       rainbow = new SblString('red,orange,yellow,green,blue,indigo,violet')
       cycle = Break(',').ca('item') + Len(1) + Rem().ca('rest')
-      rainbow[ cycle]
-      rainbow = rest + ',' + item
+      rainbow[ cycle] = rest + ',' + item
 ```
-
-Note, the third line of the Snobol code had to be split into two lines because of a bug in today's Groovy compiler.  When this gets fixed, those two lines can be <code>rainbow[ cycle] = rest + ',' + item</code>.
 
 Also note, Gpattern handles doing immediate assignments in addition to conditional assignments.
 
@@ -119,11 +116,9 @@ Putting the above snippet into a complete program, running this in a groovyConso
   matchCtx.with {
       rainbow = new SblString('red,orange,yellow,green,blue,indigo,violet')
       cycle = Break(',').ca('item') + Len(1) + Rem().ca('rest')
-      rainbow[ cycle]
-      rainbow = rest + ',' + item
+      rainbow[ cycle] = rest + ',' + item
       println rainbow
-      rainbow[ cycle]
-      rainbow = rest + ',' + item
+      rainbow[ cycle] = rest + ',' + item
       println rainbow
   }
 ```
@@ -138,47 +133,6 @@ yellow,green,blue,indigo,violet,red,orange
 ### Caveats
 
 Because of the way that Gpattern is implemented, there are a few caveats that you'll run into.  Part of releasing Gpattern now is to get a feel for whether these issues are too much.  Another part is see if someone out there can see away around one or more of them.
-
-#### Current DSL and Groovy compiler bug
-
-This issue is painful, but hopefully it can be resolved.
-
-Groovy evaluates operands in an '=' expression like:
-
-`subject[ pattern] = replacement`
-
-in three steps:
-
-1. the RHS of the equals (replacement in this case)
-2. the LHS of the equals (resolving 'subject' and 'pattern')
-3. calling 'putAt' on subject to do the actual assignment
-
-I believe that the Groovy compiler is doing steps 1 and 2 are in the wrong order.  Furthermore, this doesn't match the order used by Java.
-
-But, another issue is that the 'puAt' method is being called last.  This is a problem because this method is where the actual pattern match is being executed - and last is too late.
-
-This evaluation ordering issue breaks any Snobol like pattern where the "pattern" evaluation is suppose to have side effects that are used in the "replacement".
-
-One example of such a pattern appears in the program above.  There, the "cycle" pattern used in the line:
-
-```      rainbow[ cycle] = rest + ',' + item```
-
-has the side effect of assigning values to the "rest" and "item" variables.  In Gpattern it currently has to be broken into two lines:
-
-```
-    rainbow[ cycle]
-    rainbow = rest + ',' + item
-```
-      
-While this works for this program, splitting lines won't work for all replacement patterns.  (E.g., this will have problems when the pattern match is only suppose to be replace a substring within the subject string.)
-
-Ideally, a replacement statement would be written as one statement and done in the following order:
-
-1. resolve the LHS, doing the pattern match (remembering the matched substring and any assignments done).
-2. resolve the RHS, building the replacement string.
-3. do the 'putAt' function, replacing the matched substring with the replacement string.
-
-Achieving this is still under investigation
 
 #### Patterns with explicit Strings or GStrings
 
@@ -332,7 +286,8 @@ It's the external variables provided by JPattern mentioned above that provides t
             str.collect( Balanced_String)
 ```
 
-    creates this list: [ 'x', 'xy', 'xy[ab{cd}]', 'y', 'y[ab{cd}]', '[ab{cd}]', 'a', 'ab', 'ab{cd}', 'b', 'b{cd}', '{cd}', 'c', 'cd', 'd']
+    creates this list: [ 'x', 'xy', 'xy[ab{cd}]', 'y', 'y[ab{cd}]', '[ab{cd}]', 'a', 'ab',
+                         'ab{cd}', 'b', 'b{cd}', '{cd}', 'c', 'cd', 'd']
     
   * collect( pattern) { closure }  
   
@@ -345,7 +300,8 @@ It's the external variables provided by JPattern mentioned above that provides t
 
 ```
 
-        generates the list ['((a+(b*c))+d)', '(a+(b*c))', '(a+(b*c))+', '(a+(b*c))+d', 'a', 'a+', 'a+(b*c)', '+', '+(b*c)', '(b*c)', 'b', 'b*', 'b*c', '*', '*c', 'c', '+', '+d', 'd']
+        generates the list ['((a+(b*c))+d)', '(a+(b*c))', '(a+(b*c))+', '(a+(b*c))+d', 'a', 'a+', 'a+(b*c)',
+                            '+', '+(b*c)', '(b*c)', 'b', 'b*', 'b*c', '*', '*c', 'c', '+', '+d', 'd']
         
   * each( pattern) { closure }
   

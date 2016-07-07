@@ -10,7 +10,8 @@ import jpattern.VarMap
 
 class SblString implements ExternalVariable {
     StringBuilder _is    // internal string
-    SblMatchContext _rc  // internal root match context
+    SblMatchContext _rc  // internal root match
+    boolean ok
 
     SblString() {
         setValue( '')
@@ -41,7 +42,6 @@ class SblString implements ExternalVariable {
     }
 
     def getAt( SblPatNode pat) {
-        boolean ok
         String matched
         int start, stop
 
@@ -68,7 +68,6 @@ class SblString implements ExternalVariable {
     def putAt( SblPatNode pat, String str) {
         String front, middle, end
         int start, stop
-        boolean ok
 
         // first, try to compile the pat
         pat = ~pat
@@ -76,6 +75,7 @@ class SblString implements ExternalVariable {
 
         context.matcher.subject = _is.toString()
         context.matcher.varMap = context.vars
+
         ok = context.matcher.match()
 
 //        ok = context.matcher.Match( _is.toString(), context.vars, context.extVars)
@@ -86,7 +86,6 @@ class SblString implements ExternalVariable {
     }
 
     def putAt( SblPatNode pat, Closure cls) {
-        boolean ok
 
         // first, try to compile the pat
         pat = ~pat
@@ -94,9 +93,34 @@ class SblString implements ExternalVariable {
 
         context.matcher.subject = _is.toString()
         context.matcher.varMap = context.vars
+
+        putAt( context, cls)
+
         ok = context.matcher.match()
 
 //        ok = context.matcher.Match( _is.toString(), context.vars, context.extVars)
+        if( ok) {
+            //call the closure to resolve the string value
+            def str = cls()
+            context.matcher.Replace( _is, str, context.matcher.start, context.matcher.stop)
+            return str
+        } else return null
+    }
+
+    def putAt( SblMatchContext context, String str) {
+
+        // this is used only for the DSL if the pattern match has already been done
+        // so use the state of 'ok'
+        if( ok) {
+            context.matcher.Replace( _is, str, context.matcher.start, context.matcher.stop)
+            return str
+        } else return null
+    }
+
+    def putAt( SblMatchContext context, Closure cls) {
+
+        // this is used only for the DSL if the pattern match has already been done
+        // so use the state of 'ok'
         if( ok) {
             //call the closure to resolve the string value
             def str = cls()

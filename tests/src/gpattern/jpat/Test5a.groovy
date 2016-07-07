@@ -33,10 +33,13 @@ public class Test5a
         matchCtx.registerVariable('ExtVar', extvar)
 
         matchCtx.with {
-            // top level 'after'.cr('ExtVar') doesn't transform properly
-//            p = (Defer('ExtVar') + Span(' ')).ca('ExtVar') + ~('after').cr('ExtVar')
+            // after this match succeeds, the length of the matching substring is
+            // 15 characters (corresponding to the length of "before    after"
+            // but, the subject string will be modified by the match to be
+            // 20 characters long --- "before    before    "
             p = ~( (Defer('ExtVar') + Span(' ')).ca('ExtVar') + 'after'.cr('ExtVar'))
             println '|>' + subject[ p] + '<|'
+            assert subject.value == 'before    before    '
         }
     }
 }

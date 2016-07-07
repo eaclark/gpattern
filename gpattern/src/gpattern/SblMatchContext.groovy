@@ -66,7 +66,7 @@ class SblMatchContext {
         def nextNode = c()
 
         if( nextNode instanceof SblPatNode) {
-            println 'matchContext - pattern give closure, got ' + node
+            // println 'matchContext - pattern give closure, got ' + node
             registerPattern( name, node)
         }
     }

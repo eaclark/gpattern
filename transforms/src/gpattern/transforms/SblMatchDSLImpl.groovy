@@ -5,6 +5,11 @@ package gpattern.transforms
  */
 
 import org.codehaus.groovy.ast.*
+import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.EmptyStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
+import org.codehaus.groovy.ast.stmt.IfStatement
+import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.transform.*
 import org.codehaus.groovy.control.*
 import org.codehaus.groovy.ast.expr.*
@@ -45,7 +50,7 @@ public class SblMatchDSLImpl implements ASTTransformation {
                 if( cna.any( testSblAnnotation) &&                                       // target class is annotated properly
                     mns.every { m -> m.getAnnotations().any( testSblAnnotation) }        // target method(s) is annotated properly
                   ) {
-                    mce.arguments.each{ a ->
+                    mce.arguments.eachWithIndex{ a, i ->
                         if( a.class == ClosureExpression) {
                             a.visit( withVisitor)
                         }
@@ -61,6 +66,39 @@ public class SblMatchDSLImpl implements ASTTransformation {
         // this is for visiting the top level with statements
 
         new CodeVisitorSupport() {
+            @Override
+            void visitBlockStatement(BlockStatement blockStatement) {
+                blockStatement.statements.eachWithIndex { stmt, idx ->
+                    IfStatement ifStatement
+
+                    if (stmt instanceof ExpressionStatement) {
+                        if ( stmt.expression instanceof BinaryExpression &&
+                            !(stmt.expression instanceof DeclarationExpression) ) {
+                            BinaryExpression expr = (BinaryExpression) stmt.expression
+                            Expression lhs = expr.leftExpression
+                            Token oper = expr.operation
+                            Expression rhs = expr.rightExpression
+
+                            if ( lhs instanceof BinaryExpression &&
+                                 oper.text == '='
+                               ) {
+                                Expression left_lhs = lhs.leftExpression
+                                Token left_oper = lhs.operation
+                                Expression left_rhs = lhs.rightExpression
+
+                                if ( left_oper.text == '[') {
+                                    ifStatement = createIfStatement( 'it', lhs, left_lhs, rhs)
+                                    blockStatement.statements[idx] = ifStatement
+                                }
+
+                            }
+                        }
+                    }
+                }
+
+                super.visitBlockStatement( blockStatement)
+            }
+
             @Override
             void visitBinaryExpression( BinaryExpression be) {
                 /* This handles the case that a pattern creation/assignment is just a String
@@ -85,9 +123,9 @@ public class SblMatchDSLImpl implements ASTTransformation {
 //                println '\nrhs = ' + rhs.text + '       class = ' + rhs.class
 
                 if( be.operation.type == Types.ASSIGN ||
-                        be.operation.type == Types.PLUS ||
-                        be.operation.type == Types.BITWISE_OR ||
-                        be.operation.type == Types.LEFT_SQUARE_BRACKET ) {
+                    be.operation.type == Types.PLUS ||
+                    be.operation.type == Types.BITWISE_OR ||
+                    be.operation.type == Types.LEFT_SQUARE_BRACKET ) {
 
                     // have to check for a few things at this level because this is where we can
                     // replace the expression.  Can't do it at a lower level
@@ -119,8 +157,8 @@ public class SblMatchDSLImpl implements ASTTransformation {
                           lhs.getExpression() instanceof GStringExpression)) {
                             be.leftExpression = new BitwiseNegationExpression( createStringPat( lhs.getExpression()))
                     } else if( lhs instanceof MethodCallExpression &&
-                               ( (lhs.getReceiver() instanceof ConstantExpression &&
-                                  lhs.getReceiver().value instanceof String) ||
+                               ( ( lhs.getReceiver() instanceof ConstantExpression &&
+                                   lhs.getReceiver().value instanceof String) ||
                                  lhs.getReceiver() instanceof GStringExpression) &&
                                lhs.methodAsString in ['ca', 'ia', 'cr']) {
                             be.leftExpression = new MethodCallExpression(
@@ -209,7 +247,7 @@ public class SblMatchDSLImpl implements ASTTransformation {
                     if( rhs instanceof MethodCallExpression &&
                         (( rhs.getReceiver() instanceof ConstantExpression &&
                            rhs.getReceiver().value instanceof String) ||
-                          rhs.getReceiver() instanceof GStringExpression) &&
+                           rhs.getReceiver() instanceof GStringExpression) &&
                         rhs.methodAsString in ['ca', 'ia', 'cr']) {
                         be.rightExpression = new MethodCallExpression(
                                 createStringPat( rhs.getReceiver()),
@@ -260,13 +298,30 @@ public class SblMatchDSLImpl implements ASTTransformation {
         }
     }
 
-    private static MethodCallExpression createStringPat( Expression value) {
+
+    private static IfStatement createIfStatement( ctx, subjectMatch, subject, replacement_str) {
+        // this changes the code "subj[ pat] = replacement_str"
+        // to " if ( subj[ pat]) subj[ it ] = replacement_str"
+        return new IfStatement( new BooleanExpression( subjectMatch),
+                                new ExpressionStatement( new BinaryExpression( new BinaryExpression( subject,
+                                                                                                     Token.newSymbol( Types.LEFT_SQUARE_BRACKET, 0, 0),
+                                                                                                     new VariableExpression( 'it')
+                                                                                                    ),
+                                                                               Token.newSymbol(Types.EQUALS, 0, 0),
+                                                                               replacement_str
+                                                                             )
+                                                       ),
+                                new EmptyStatement()
+                              )
+    }
+
+    private static MethodCallExpression createStringPat( ASTNode value) {
 //println 'creating stringPat with text = ' + value.text
 //println 'for expression class = ' + value.class
         def call = new MethodCallExpression(
                 new VariableExpression( "this"),
                 new ConstantExpression( "StringPat"),
-                new ArgumentListExpression( value)
+                new ArgumentListExpression( value as Expression)
         )
 //        call.implicitThis = true
 //        call.safe = exp.safe

@@ -16,7 +16,9 @@ Having said that, it's probably at a point where it can be played with.  I would
 
 ## Download
 
-Only one JAR is required to use Gpattern - *gpattern.jar* - it contains the necessary *jpattern.jar* file.  *gpattern.jar* is available at [this repository] (https://github.com/eaclark/gpattern).  The [source for Gpattern and some tests](https://github.com/eaclark/gpattern) are there as well.
+One distribution JAR file is required to use Gpattern - *gpattern-dist-x.y.jar* - which is available at [this repository] (https://github.com/eaclark/gpattern).  It contains three files:  *gpattern.jar*, *jpattern.jar*, and *SblMatchDSL.jar* that need to be extracted and placed somewhere on you classpath.
+
+The [source and some tests](https://github.com/eaclark/gpattern) are there as well.
 
 If you want to play around with JPattern directly, then you can get it from [Dennis Heimbigner's software page] (http://www.unidata.ucar.edu/staff/dmh/software.html).  Dennis maintains the [source for JPattern at github](https://github.com/Unidata/jpattern).
 
@@ -101,7 +103,7 @@ Also note, Gpattern handles doing immediate assignments in addition to condition
 
 The JPattern library uses a two step process for building working patterns.  As a first step, JPattern uses a separate "compiler" to parse a very Snobol-esque pattern definition and generate an equivalent set of Java method calls.  As a second step, this set of Java code is then compiled by the normal Java compiler.
 
-The Gpattern library, on the other hand, uses the MOP and builder technologies of the Groovy world to blend these two steps into one compiler step.  (Granted, it's a rather complex single step, but the Groovy compiler handles it automagically.)
+The Gpattern library, on the other hand, uses an AST transformation together with the MOP and builder technologies of the Groovy world to blend these two steps into one compiler step.  (Granted, it's a rather complex single step, but the Groovy compiler handles it automagically.)
 
 Putting the above snippet into a complete program, running this in a groovyConsole (after adding the two needed JAR files to the classpath...):
 
@@ -137,15 +139,25 @@ yellow,green,blue,indigo,violet,red,orange
 
 Because of the way that Gpattern is implemented, there are a few caveats that you'll run into.  Part of releasing Gpattern now is to get a feel for whether these issues are too much.  Another part is see if someone out there can see away around one or more of them.
 
-#### Current Groovy compiler bug
+#### Current DSL and Groovy compiler bug
 
-This issue is painful, but hopefully it is temporary.
+This issue is painful, but hopefully it can be resolved.
 
-Because of the order that Groovy evaluates operands in an expression like:
+Groovy evaluates operands in an '=' expression like:
 
 `subject[ pattern] = replacement`
 
-Currently, Groovy evaluates the "replacement" portion before the "pattern" portion.  This breaks any Snobol like pattern where the "pattern" evaluation is suppose to have side effects that are used in the "replacement".
+in three steps:
+
+1. the RHS of the equals (replacement in this case)
+2. the LHS of the equals (resolving 'subject' and 'pattern')
+3. calling 'putAt' on subject to do the actual assignment
+
+I believe that the Groovy compiler is doing steps 1 and 2 are in the wrong order.  Furthermore, this doesn't match the order used by Java.
+
+But, another issue is that the 'puAt' method is being called last.  This is a problem because this method is where the actual pattern match is being executed - and last is too late.
+
+This evaluation ordering issue breaks any Snobol like pattern where the "pattern" evaluation is suppose to have side effects that are used in the "replacement".
 
 One example of such a pattern appears in the program above.  There, the "cycle" pattern used in the line:
 
@@ -158,29 +170,42 @@ has the side effect of assigning values to the "rest" and "item" variables.  In 
     rainbow = rest + ',' + item
 ```
       
-While this works for this program, splitting lines won't work for all replacement patterns.  Hopefully, this is only a temporary problem.
+While this works for this program, splitting lines won't work for all replacement patterns.  (E.g., this will have problems when the pattern match is only suppose to be replace a substring within the subject string.)
 
-#### Doesn't play well with Strings or GStrings
+Ideally, a replacement statement would be written as one statement and done in the following order:
 
-Unfortunately, strings (both String and Gstring) cannot be directly used in a pattern.  They have to be enclosed in a StringPat SblPatNode.  This means that a Snobol statement like:
+1. resolve the LHS, doing the pattern match (remembering the matched substring and any assignments done).
+2. resolve the RHS, building the replacement string.
+3. do the 'putAt' function, replacing the matched substring with the replacement string.
+
+Achieving this is still under investigation
+
+#### Patterns with explicit Strings or GStrings
+
+Unfortunately, patterns that use strings (both String and Gstring) directly have to be "signaled" by using the "~" unary operator at the start of the string.  This means that a Snobol statement like:
 
 `subject ('s' | 'es' | '')`
 
 has to become:
 
-`subject[ StringPat('s') | StringPat('es') | StringPat( '')]`
+`subject[ ~('s' | 'es' | '')]`
 
-Not the nicest looking bit of code.
+Internally, an AST transformation changes the above expression into
 
-This is because of the way that Gpattern uses the "plus" method ("+" operator) and the "or" method ("|" operator) for SblPatNodes to do concatenation and alternation respectively.  (The overloading would be easy if patterns never started with a String/GString, but that is obviously too restrictive.)
+`subject[ ~(StringPat('s') | StringPat('es') | StringPat(''))]`
 
-Shortening "StringPat" to "StrPat" or even "SP" would help a bit, but the explicit calls are still necessary.
+If you wish to avoid the use of the transformation, then the StringPat() method calls can be used.
 
-One way around this would be to overload the same methods for the String and GString classes in a similar fashion.  But, these are such core classes that playing around with their metamethods could have unintended consequences.
 
-Another approach would be to take advantage the AST transform functionality of Groovy that is so useful in creating Domain Specific Languages.  (And, these Snobol like patterns really are a DSL.)  The problem with this approach is I don't see a way to do this such that the annotations required would not be as cumbersome.
 
-Then again, I am a ASTTransformation novice, so this is an area where I welcome input.
+Similarly, a GString can be used if the pattern is prefixed with a "~":
+
+```
+    color = 'red'
+    // strip a color from the rainbow
+    rainbow[ ~"$color,"] = ''
+```
+
 
 #### Unevaluated pattern nodes are methods
 
